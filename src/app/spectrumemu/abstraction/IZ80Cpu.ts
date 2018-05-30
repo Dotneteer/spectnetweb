@@ -8,6 +8,7 @@ import { IBranchDebugSupport } from './IBranchDebugSupport';
 import { ILiteEvent } from './ILightEvent';
 import { AddressArgs } from '../cpu/AddressArgs';
 import { AddressAndDataArgs } from '../cpu/AddressAndDataArgs';
+import { Z80InstructionExecutionArgs } from '../cpu/Z80InstructionExecutionArgs';
 
 // Represents a Z80 CPU
 export interface IZ80Cpu extends IDevice {
@@ -106,4 +107,10 @@ export interface IZ80Cpu extends IDevice {
 
     // This event is raised just after a port has been written
     readonly PortWritten: ILiteEvent<AddressAndDataArgs>;
+
+    // This event is raised just before a Z80 operation is being executed
+    readonly OperationExecuting: ILiteEvent<Z80InstructionExecutionArgs>;
+
+    // This event is raised just after a Z80 operation has been executed
+    readonly OperationExecuted: ILiteEvent<Z80InstructionExecutionArgs>;
 }

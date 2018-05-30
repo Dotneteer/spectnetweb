@@ -22,8 +22,8 @@ export class MemoryStatusArray {
         if (index < 0 || index > 0xFFFF) {
             throw new Error(`index value ${index} is out of range: 0x0000 - 0xFFFF`);
         }
-        var position = index / 2048;
-        var mask = ~(1 << (index % 32));
+        var position = index >> 5;
+        var mask = 1 << (index % 32);
         return (this._memoryBits[position] & mask) != 0;
     }
 
@@ -32,9 +32,9 @@ export class MemoryStatusArray {
         if (index < 0 || index > 0xFFFF) {
             throw new Error(`index value ${index} is out of range: 0x0000 - 0xFFFF`);
         }
-        var position = index / 2048;
+        var position = index >> 5;
         var mask = 1 << (index % 32);
-        this._memoryBits[position] |= mask;
+        this._memoryBits[position] |= mask; 
     }
 
     // --- Checks if all addresses are touched between the start and end
