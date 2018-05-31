@@ -26,6 +26,27 @@ export interface IZ80CpuTestSupport {
     // Removes the CPU from its halted state
     RemoveFromHaltedState();
 
+    // Increments the internal clock counter with 1
+    ClockP1();
+
+    // Increments the internal clock counter with 2
+    ClockP2();
+
+    // Increments the internal clock counter with 3
+    ClockP3();
+
+    // Increments the internal clock counter with 4
+    ClockP4();
+
+    // Increments the internal clock counter with 5
+    ClockP5();
+
+    // Increments the internal clock counter with 6
+    ClockP6();
+
+    // Increments the internal clock counter with 7
+    ClockP7();
+
     // Gets the current execution flow status
     readonly ExecutionFlowStatus: MemoryStatusArray
 
