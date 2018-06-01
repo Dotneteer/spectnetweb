@@ -1,5 +1,5 @@
 // Represents set masks for each Z80 flags
-export enum FlagSetMask
+export enum FlagsSetMask
 {
     S = 0x80,
     Z = 0x40,

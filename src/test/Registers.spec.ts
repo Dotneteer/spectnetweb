@@ -1,4 +1,5 @@
-import { Registers } from './Registers'
+import { Registers } from '../app/spectrumemu/cpu/Registers'
+
 describe('Z80 CPU Basic tests', () => {
 
     var registers: Registers;

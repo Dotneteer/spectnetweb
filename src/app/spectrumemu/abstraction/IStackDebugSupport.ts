@@ -1,4 +1,4 @@
-import { StackPointerManipulationEvent } from "../cpu/StackPointerManipulaionEvent";
+import { StackPointerManipulationEvent } from "../cpu/StackPointerManipulationEvent";
 import { StackContentManipulationEvent } from "../cpu/StackContentManipulationEvent";
 
 // This interface defines the operations that support debugging the call stack

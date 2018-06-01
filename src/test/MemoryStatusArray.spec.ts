@@ -1,4 +1,4 @@
-import { MemoryStatusArray } from './MemoryStatusArray'
+import { MemoryStatusArray } from '../app/spectrumemu/cpu/MemoryStatusArray'
 describe('MemoryStatusArray tests', () => {
 
     var status: MemoryStatusArray;

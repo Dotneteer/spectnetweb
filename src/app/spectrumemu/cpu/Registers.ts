@@ -1,5 +1,5 @@
-import { FlagSetMask } from './FlagSetMask';
-import { FlagResetMask } from './FlagResetMask';
+import { FlagsSetMask } from './FlagsSetMask';
+import { FlagsResetMask } from './FlagsResetMask';
 
 // Represents the register set of the Z80 CPU
 export class Registers {
@@ -151,14 +151,14 @@ export class Registers {
     public set WZ(value: number) { this._wz = value & 0xffff; }
 
     // --- Individual flags
-    public get SFlag() { return (this._f & FlagSetMask.S) != 0; }
-    public get ZFlag() { return (this._f & FlagSetMask.Z) != 0; }
-    public get R5Flag() { return (this._f & FlagSetMask.R5) != 0; }
-    public get HFlag() { return (this._f & FlagSetMask.H) != 0; }
-    public get R3Flag() { return (this._f & FlagSetMask.R3) != 0; }
-    public get PVFlag() { return (this._f & FlagSetMask.PV) != 0; }
-    public get NFlag() { return (this._f & FlagSetMask.H) != 0; }
-    public get CFlag() { return (this._f & FlagSetMask.C) != 0; }
+    public get SFlag() { return (this._f & FlagsSetMask.S) != 0; }
+    public get ZFlag() { return (this._f & FlagsSetMask.Z) != 0; }
+    public get R5Flag() { return (this._f & FlagsSetMask.R5) != 0; }
+    public get HFlag() { return (this._f & FlagsSetMask.H) != 0; }
+    public get R3Flag() { return (this._f & FlagsSetMask.R3) != 0; }
+    public get PVFlag() { return (this._f & FlagsSetMask.PV) != 0; }
+    public get NFlag() { return (this._f & FlagsSetMask.H) != 0; }
+    public get CFlag() { return (this._f & FlagsSetMask.C) != 0; }
 
     // --- Register change methods
     public ExchangeAfSet() {

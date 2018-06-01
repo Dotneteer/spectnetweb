@@ -1,6 +1,6 @@
-import { Z80Cpu } from './Z80Cpu'
-import { IZ80Cpu } from '../abstraction/IZ80Cpu';
-import { IZ80CpuTestSupport } from '../abstraction/IZ80CpuTestSupport';
+import { Z80Cpu } from '../app/spectrumemu/cpu/Z80Cpu'
+import { IZ80Cpu } from '../app/spectrumemu/abstraction/IZ80Cpu';
+import { IZ80CpuTestSupport } from '../app/spectrumemu/abstraction/IZ80CpuTestSupport';
 
 describe('Z80 CPU Basic tests', () => {
 
