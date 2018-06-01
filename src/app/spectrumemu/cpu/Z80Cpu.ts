@@ -17,6 +17,7 @@ import { MemoryStatusArray } from './MemoryStatusArray';
 // This class represents the Z80 CPU
 export class Z80Cpu implements IZ80Cpu, IZ80CpuTestSupport {
 
+    private _opCode: number;
     private _instructionBytes: number[] = [];
     private _lastPC: number;
 
@@ -141,6 +142,11 @@ export class Z80Cpu implements IZ80Cpu, IZ80CpuTestSupport {
         this.OperationExecuted = new LiteEvent<Z80InstructionExecutionArgs>();
     }
 
+    // Applies the RESET signal
+    Reset() {
+        this.ExecuteReset();
+    }
+    
     // ========================================================================
     // Clock handling methods
     // Increments the internal clock with the specified delay ticks
@@ -234,55 +240,58 @@ export class Z80Cpu implements IZ80Cpu, IZ80CpuTestSupport {
                     // --- Normal (8-bit) operation code received
                     this.IsInterruptBlocked = false;
                     this._opCode = opCode;
-                        OperationExecuting?.Invoke(this, 
-                            new Z80InstructionExecutionEventArgs(_lastPC, _instructionBytes, opCode));
-                        ProcessStandardOrIndexedOperations();
-                        OperationExecuted?.Invoke(this, 
-                            new Z80InstructionExecutionEventArgs(_lastPC, _instructionBytes, opCode, Registers.PC));
-                        _prefixMode = OpPrefixMode.None;
-                        _indexMode = OpIndexMode.None;
-                        _isInOpExecution = false;
-                        _instructionBytes.Clear();
-                        _lastPC = Registers.PC;
-                        return;
-                }
+                    (this.OperationExecuting as LiteEvent<Z80InstructionExecutionArgs>)
+                        .trigger(new Z80InstructionExecutionArgs(
+                            this._lastPC, this._instructionBytes, opCode, null));
+                    this.ProcessStandardOrIndexedOperations();
+                    (this.OperationExecuted as LiteEvent<Z80InstructionExecutionArgs>)
+                        .trigger(new Z80InstructionExecutionArgs(
+                            this._lastPC, this._instructionBytes, opCode, this.Registers.PC));
+                    this.PrefixMode = OpPrefixMode.None;
+                    this.IndexMode = OpIndexMode.None;
+                    this.IsInOpExecution = false;
+                    this._instructionBytes = [];
+                    this._lastPC = this.Registers.PC;
+                    return;
             }
+        }
 
-            if (_prefixMode == OpPrefixMode.Bit)
-            {
-                // --- The CPU is already in BIT operations (0xCB) prefix mode
-                _isInterruptBlocked = false;
-                _opCode = opCode;
-                OperationExecuting?.Invoke(this,
-                    new Z80InstructionExecutionEventArgs(_lastPC, _instructionBytes, opCode));
-                ProcessCBPrefixedOperations();
-                OperationExecuted?.Invoke(this,
-                    new Z80InstructionExecutionEventArgs(_lastPC, _instructionBytes, opCode, Registers.PC));
-                _indexMode = OpIndexMode.None;
-                _prefixMode = OpPrefixMode.None;
-                _isInOpExecution = false;
-                _instructionBytes.Clear();
-                _lastPC = Registers.PC;
-                return;
-            }
+        if (this.PrefixMode == OpPrefixMode.Bit) {
+            // --- The CPU is already in BIT operations (0xCB) prefix mode
+            this.IsInterruptBlocked = false;
+            this._opCode = opCode;
+            (this.OperationExecuting as LiteEvent<Z80InstructionExecutionArgs>)
+                .trigger(new Z80InstructionExecutionArgs(
+                    this._lastPC, this._instructionBytes, opCode, null));
+            this.ProcessCBPrefixedOperations();
+            (this.OperationExecuted as LiteEvent<Z80InstructionExecutionArgs>)
+                .trigger(new Z80InstructionExecutionArgs(
+                    this._lastPC, this._instructionBytes, opCode, this.Registers.PC));
+            this.IndexMode = OpIndexMode.None;
+            this.PrefixMode = OpPrefixMode.None;
+            this.IsInOpExecution = false;
+            this._instructionBytes = [];
+            this._lastPC = this.Registers.PC;
+            return;
+        }
 
-            if (_prefixMode == OpPrefixMode.Extended)
-            {
-                // --- The CPU is already in Extended operations (0xED) prefix mode
-                _isInterruptBlocked = false;
-                _opCode = opCode;
-                OperationExecuting?.Invoke(this,
-                    new Z80InstructionExecutionEventArgs(_lastPC, _instructionBytes, opCode));
-                ProcessEDOperations();
-                OperationExecuted?.Invoke(this,
-                    new Z80InstructionExecutionEventArgs(_lastPC, _instructionBytes, opCode, Registers.PC));
-                _indexMode = OpIndexMode.None;
-                _prefixMode = OpPrefixMode.None;
-                _isInOpExecution = false;
-                _instructionBytes.Clear();
-                _lastPC = Registers.PC;
-            }
-
+        if (this.PrefixMode == OpPrefixMode.Extended) {
+            // --- The CPU is already in Extended operations (0xED) prefix mode
+            this.IsInterruptBlocked = false;
+            this._opCode = opCode;
+            (this.OperationExecuting as LiteEvent<Z80InstructionExecutionArgs>)
+                .trigger(new Z80InstructionExecutionArgs(
+                        this._lastPC, this._instructionBytes, opCode, null));
+            this.ProcessEDOperations();
+            (this.OperationExecuted as LiteEvent<Z80InstructionExecutionArgs>)
+                .trigger(new Z80InstructionExecutionArgs(
+                    this._lastPC, this._instructionBytes, opCode, this.Registers.PC));
+            this.IndexMode = OpIndexMode.None;
+            this.PrefixMode = OpPrefixMode.None;
+            this.IsInOpExecution = false;
+            this._instructionBytes = [];
+            this._lastPC = this.Registers.PC;
+        }
     }
   
     // Checks if the next instruction to be executed is a call instruction or not
@@ -290,11 +299,6 @@ export class Z80Cpu implements IZ80Cpu, IZ80CpuTestSupport {
         return 0;
     }
     
-    // Applies the RESET signal
-    Reset() {
-        this.Tacts = 0;
-    }
-
     // ========================================================================
     // Memory and port device operations
 
@@ -550,4 +554,1045 @@ export class Z80Cpu implements IZ80Cpu, IZ80CpuTestSupport {
 
     RestoreDeviceState(state: any) {
     }
+
+    // ========================================================================
+    // Instruction execution
+    
+    // Process Z80 opcodes without a prefix, or with DD and FD prefix
+    ProcessStandardOrIndexedOperations() {
+
+    }
+
+    // Process Z80 opcodes with ED prefix
+    ProcessEDOperations(){
+
+    }
+
+    // Process Z80 opcodes with CB prefix
+    ProcessCBPrefixedOperations() {
+
+    }
+
+    // ========================================================================
+    // Instruction process function jump tables
+
+    private _stardardOperations: ((Z80Cpu) => void)[] = [
+        null,      LdBCNN,    LdBCiA,    IncBC,     IncB,      DecB,      LdBN,      Rlca,    // 00..07
+        ExAF,      AddHLBC,   LdABCi,    DecBC,     IncC,      DecC,      LdCN,      Rrca,    // 08..0F
+        Djnz,      LdDENN,    LdDEiA,    IncDE,     IncD,      DecD,      LdDN,      Rla,     // 10..17
+        JrE,       AddHLDE,   LdADEi,    DecDE,     IncE,      DecE,      LdEN,      Rra,     // 18..1F
+        JrNZ,      LdHLNN,    LdNNiHL,   IncHL,     IncH,      DecH,      LdHN,      Daa,     // 20..27
+        JrZ,       AddHLHL,   LdHLNNi,   DecHL,     IncL,      DecL,      LdLN,      Cpl,     // 28..2F
+        JrNC,      LdSPNN,    LdNNA,     IncSP,     IncHLi,    DecHLi,    LdHLiN,    Scf,     // 30..37
+        JrC,       AddHLSP,   LdNNiA,    DecSP,     IncA,      DecA,      LdAN,      Ccf,     // 38..3F
+        null,      LdB_C,     LdB_D,     LdB_E,     LdB_H,     LdB_L,     LdB_HLi,   LdB_A,   // 40..47
+        LdC_B,     null,      LdC_D,     LdC_E,     LdC_H,     LdC_L,     LdC_HLi,   LdC_A,   // 48..4F
+        LdD_B,     LdD_C,     null,      LdD_E,     LdD_H,     LdD_L,     LdD_HLi,   LdD_A,   // 50..57
+        LdE_B,     LdE_C,     LdE_D,     null,      LdE_H,     LdE_L,     LdE_HLi,   LdE_A,   // 58..5F
+        LdH_B,     LdH_C,     LdH_D,     LdH_E,     null,      LdH_L,     LdH_HLi,   LdH_A,   // 60..67
+        LdL_B,     LdL_C,     LdL_D,     LdL_E,     LdL_H,     null,      LdL_HLi,   LdL_A,   // 68..6F
+        LdHLi_B,   LdHLi_C,   LdHLi_D,   LdHLi_E,   LdHLi_H,   LdHLi_L,   Halt,      LdHLi_A, // 70..77
+        LdA_B,     LdA_C,     LdA_D,     LdA_E,     LdA_H,     LdA_L,     LdA_HLi,   null,    // 78..7F
+        AddA_B,    AddA_C,    AddA_D,    AddA_E,    AddA_H,    AddA_L,    AddA_HLi,  AddA_A,  // 80..87
+        AdcA_B,    AdcA_C,    AdcA_D,    AdcA_E,    AdcA_H,    AdcA_L,    AdcA_HLi,  AdcA_A,  // 88..8F
+        SubB,      SubC,      SubD,      SubE,      SubH,      SubL,      SubHLi,    SubA,    // 90..97
+        SbcB,      SbcC,      SbcD,      SbcE,      SbcH,      SbcL,      SbcHLi,    SbcA,    // 98..9F
+        AndB,      AndC,      AndD,      AndE,      AndH,      AndL,      AndHLi,    AndA,    // A0..A7
+        XorB,      XorC,      XorD,      XorE,      XorH,      XorL,      XorHLi,    XorA,    // A8..AF
+        OrB,       OrC,       OrD,       OrE,       OrH,       OrL,       OrHLi,     OrA,     // B0..B7
+        CpB,       CpC,       CpD,       CpE,       CpH,       CpL,       CpHLi,     CpA,     // B8..BF
+        RetNZ,     PopBC,     JpNZ_NN,   JpNN,      CallNZ,    PushBC,    AluAN,     Rst00,   // C0..C7
+        RetZ,      Ret,       JpZ_NN,    null,      CallZ,     CallNN,    AluAN,     Rst08,   // C8..CF
+        RetNC,     PopDE,     JpNC_NN,   OutNA,     CallNC,    PushDE,    AluAN,     Rst10,   // D0..D7
+        RetC,      Exx,       JpC_NN,    InAN,      CallC,     null,      AluAN,     Rst18,   // D8..DF
+        RetPO,     PopHL,     JpPO_NN,   ExSPiHL,   CallPO,    PushHL,    AluAN,     Rst20,   // E0..E7
+        RetPE,     JpHL,      JpPE_NN,   ExDEHL,    CallPE,    null,      AluAN,     Rst28,   // E8..EF
+        RetP,      PopAF,     JpP_NN,    Di,        CallP,     PushAF,    AluAN,     Rst30,   // F0..F7
+        RetM,      LdSPHL,    JpM_NN,    Ei,        CallM,     null,      AluAN,     Rst38    // F8..FF
+    ];
+
+    private _extendedOperations: ((Z80Cpu) => void)[] = [
+        null,      null,      null,      null,      null,      null,      null,      null,    // 00..07
+        null,      null,      null,      null,      null,      null,      null,      null,    // 08..0F
+        null,      null,      null,      null,      null,      null,      null,      null,    // 10..17
+        null,      null,      null,      null,      null,      null,      null,      null,    // 18..1F
+        null,      null,      null,      Swapnib,   MirrA,     null,      MirrDE,    TestN,   // 20..27
+        null,      null,      null,      null,      null,      null,      null,      null,    // 28..2F
+        Mul,       AddHL_A,   AddDE_A,   AddBC_A,   AddHLNN,   AddDENN,   AddBCNN,   null,    // 30..37
+        null,      null,      null,      null,      null,      null,      null,      null,    // 38..3F
+
+        InB_C,     OutC_B,    SbcHL_QQ,  LdNNi_QQ,  Neg,       Retn,      ImN,       LdXR_A,  // 40..47
+        InC_C,     OutC_C,    AdcHL_QQ,  LdQQ_NNi,  Neg,       Reti,      ImN,       LdXR_A,  // 48..4F
+        InD_C,     OutC_D,    SbcHL_QQ,  LdNNi_QQ,  Neg,       Retn,      ImN,       LdA_XR,  // 50..57
+        InE_C,     OutC_E,    AdcHL_QQ,  LdQQ_NNi,  Neg,       Retn,      ImN,       LdA_XR,  // 58..5F
+        InH_C,     OutC_H,    SbcHL_QQ,  LdNNi_QQ,  Neg,       Retn,      ImN,       Rrd,     // 60..67
+        InL_C,     OutC_L,    AdcHL_QQ,  LdQQ_NNi,  Neg,       Retn,      ImN,       Rld,     // 60..6F
+        InF_C,     OutC_0,    SbcHL_QQ,  LdNNi_QQ,  Neg,       Retn,      ImN,       null,    // 70..77
+        InA_C,     OutC_A,    AdcHL_QQ,  LdSP_NNi,  Neg,       Retn,      ImN,       null,    // 78..7F
+
+        null,      null,      null,      null,      null,      null,      null,      null,    // 80..87
+        null,      null,      PushNN,    null,      null,      null,      null,      null,    // 88..8F
+        Outinb,    Nextreg,   NextregA,  Pixeldn,   Pixelad,   Setae,     null,      null,    // 90..97
+        null,      null,      null,      null,      null,      null,      null,      null,    // 98..9F
+        Ldi,       Cpi,       Ini,       Outi,      Ldix,      null,      null,      null,    // A0..A7
+        Ldd,       Cpd,       Ind,       Outd,      Lddx,      null,      null,      null,    // A8..AF
+        Ldir,      Cpir,      Inir,      Otir,      Ldirx,     null,      Ldirscale, Ldpirx,  // B0..B7
+        Lddr,      Cpdr,      Indr,      Otdr,      Lddrx,     null,      null,      null,    // B0..BF
+
+        null,      null,      null,      null,      null,      null,      null,      null,    // C0..C7
+        null,      null,      null,      null,      null,      null,      null,      null,    // C8..CF
+        null,      null,      null,      null,      null,      null,      null,      null,    // D0..D7
+        null,      null,      null,      null,      null,      null,      null,      null,    // D8..DF
+        null,      null,      null,      null,      null,      null,      null,      null,    // E0..E7
+        null,      null,      null,      null,      null,      null,      null,      null,    // E8..EF
+        null,      null,      null,      null,      null,      null,      null,      null,    // F0..F7
+        null,      null,      null,      null,      null,      null,      null,      null     // F8..FF
+    ];
+
+    // ========================================================================
+    // Processing bit (CB prefix) Z80 instructions    
+
+    // ========================================================================
+    // Processing indexed (DD or FD prefix) Z80 instructions    
+
+    // ========================================================================
+    // Processing indexed bit (CB/DD or CB/FD prefix) Z80 instructions    
+
 }
+
+// ========================================================================
+// Processing standard (no prefix) Z80 instructions    
+
+function LdBCNN(cpu: Z80Cpu) {
+}
+
+function LdBCiA(cpu: Z80Cpu) {
+}
+
+function IncBC(cpu: Z80Cpu) {
+}
+
+function IncB(cpu: Z80Cpu) {
+}
+
+function DecB(cpu: Z80Cpu) {
+}
+
+function LdBN(cpu: Z80Cpu) {
+}
+
+function Rlca(cpu: Z80Cpu) {
+}
+
+function ExAF(cpu: Z80Cpu) {
+}
+
+function AddHLBC(cpu: Z80Cpu) {
+}
+
+function LdABCi(cpu: Z80Cpu) {
+}
+
+function DecBC(cpu: Z80Cpu) {
+}
+
+function IncC(cpu: Z80Cpu) {
+}
+
+function DecC(cpu: Z80Cpu) {
+}
+
+function LdCN(cpu: Z80Cpu) {
+}
+
+function Rrca(cpu: Z80Cpu) {
+}
+
+function Djnz(cpu: Z80Cpu) {
+}
+
+function LdDENN(cpu: Z80Cpu) {
+}
+
+function LdDEiA(cpu: Z80Cpu) {
+}
+
+function IncDE(cpu: Z80Cpu) {
+}
+
+function IncD(cpu: Z80Cpu) {
+}
+
+function DecD(cpu: Z80Cpu) {
+}
+
+function LdDN(cpu: Z80Cpu) {
+}
+
+function Rla(cpu: Z80Cpu) {
+}
+
+function JrE(cpu: Z80Cpu) {
+}
+
+function AddHLDE(cpu: Z80Cpu) {
+}
+
+function LdADEi(cpu: Z80Cpu) {
+}
+
+function DecDE(cpu: Z80Cpu) {
+}
+
+function IncE(cpu: Z80Cpu) {
+}
+
+function DecE(cpu: Z80Cpu) {
+}
+
+function LdEN(cpu: Z80Cpu) {
+}
+
+function Rra(cpu: Z80Cpu) {
+}
+
+function JrNZ(cpu: Z80Cpu) {
+}
+
+function LdHLNN(cpu: Z80Cpu) {
+}
+
+function LdNNiHL(cpu: Z80Cpu) {
+}
+
+function IncHL(cpu: Z80Cpu) {
+}
+
+function IncH(cpu: Z80Cpu) {
+}
+
+function DecH(cpu: Z80Cpu) {
+}
+
+function LdHN(cpu: Z80Cpu) {
+}
+
+function Daa(cpu: Z80Cpu) {
+}
+
+function JrZ(cpu: Z80Cpu) {
+}
+
+function AddHLHL(cpu: Z80Cpu) {
+}
+
+function LdHLNNi(cpu: Z80Cpu) {
+}
+
+function DecHL(cpu: Z80Cpu) {
+}
+
+function IncL(cpu: Z80Cpu) {
+}
+
+function DecL(cpu: Z80Cpu) {
+}
+
+function LdLN(cpu: Z80Cpu) {
+}
+
+function Cpl(cpu: Z80Cpu) {
+}
+
+function JrNC(cpu: Z80Cpu) {
+}
+
+function LdSPNN(cpu: Z80Cpu) {
+}
+
+function LdNNA(cpu: Z80Cpu) {
+}
+
+function IncSP(cpu: Z80Cpu) {
+}
+
+function IncHLi(cpu: Z80Cpu) {
+}
+
+function DecHLi(cpu: Z80Cpu) {
+}
+
+function LdHLiN(cpu: Z80Cpu) {
+}
+
+function Scf(cpu: Z80Cpu) {
+}
+
+function JrC(cpu: Z80Cpu) {
+}
+
+function AddHLSP(cpu: Z80Cpu) {
+}
+
+function LdNNiA(cpu: Z80Cpu) {
+}
+
+function DecSP(cpu: Z80Cpu) {
+}
+
+function IncA(cpu: Z80Cpu) {
+}
+
+function DecA(cpu: Z80Cpu) {
+}
+
+function LdAN(cpu: Z80Cpu) {
+}
+
+function Ccf(cpu: Z80Cpu) {
+}
+
+function LdB_C(cpu: Z80Cpu) {
+}
+
+function LdB_D(cpu: Z80Cpu) {
+}
+
+function LdB_E(cpu: Z80Cpu) {
+}
+
+function LdB_H(cpu: Z80Cpu) {
+}
+
+function LdB_L(cpu: Z80Cpu) {
+}
+
+function LdB_HLi(cpu: Z80Cpu) {
+}
+
+function LdB_A(cpu: Z80Cpu) {
+}
+
+function LdC_B(cpu: Z80Cpu) {
+}
+
+function LdC_D(cpu: Z80Cpu) {
+}
+
+function LdC_E(cpu: Z80Cpu) {
+}
+
+function LdC_H(cpu: Z80Cpu) {
+}
+
+function LdC_L(cpu: Z80Cpu) {
+}
+
+function LdC_HLi(cpu: Z80Cpu) {
+}
+
+function LdC_A(cpu: Z80Cpu) {
+}
+
+function LdD_B(cpu: Z80Cpu) {
+}
+
+function LdD_C(cpu: Z80Cpu) {
+}
+
+function LdD_E(cpu: Z80Cpu) {
+}
+
+function LdD_H(cpu: Z80Cpu) {
+}
+
+function LdD_L(cpu: Z80Cpu) {
+}
+
+function LdD_HLi(cpu: Z80Cpu) {
+}
+
+function LdD_A(cpu: Z80Cpu) {
+}
+
+function LdE_B(cpu: Z80Cpu) {
+}
+
+function LdE_C(cpu: Z80Cpu) {
+}
+
+function LdE_D(cpu: Z80Cpu) {
+}
+
+function LdE_H(cpu: Z80Cpu) {
+}
+
+function LdE_L(cpu: Z80Cpu) {
+}
+
+function LdE_HLi(cpu: Z80Cpu) {
+}
+
+function LdE_A(cpu: Z80Cpu) {
+}
+
+function LdH_B(cpu: Z80Cpu) {
+}
+
+function LdH_C(cpu: Z80Cpu) {
+}
+
+function LdH_D(cpu: Z80Cpu) {
+}
+
+function LdH_E(cpu: Z80Cpu) {
+}
+
+function LdH_L(cpu: Z80Cpu) {
+}
+
+function LdH_HLi(cpu: Z80Cpu) {
+}
+
+function LdH_A(cpu: Z80Cpu) {
+}
+
+function LdL_B(cpu: Z80Cpu) {
+}
+
+function LdL_C(cpu: Z80Cpu) {
+}
+
+function LdL_D(cpu: Z80Cpu) {
+}
+
+function LdL_E(cpu: Z80Cpu) {
+}
+
+function LdL_H(cpu: Z80Cpu) {
+}
+
+function LdL_HLi(cpu: Z80Cpu) {
+}
+
+function LdL_A(cpu: Z80Cpu) {
+}
+
+function LdHLi_B(cpu: Z80Cpu) {
+}
+
+function LdHLi_C(cpu: Z80Cpu) {
+}
+
+function LdHLi_D(cpu: Z80Cpu) {
+}
+
+function LdHLi_E(cpu: Z80Cpu) {
+}
+
+function LdHLi_H(cpu: Z80Cpu) {
+}
+
+function LdHLi_L(cpu: Z80Cpu) {
+}
+
+function Halt(cpu: Z80Cpu) {
+}
+
+function LdHLi_A(cpu: Z80Cpu) {
+}
+
+function LdA_B(cpu: Z80Cpu) {
+}
+
+function LdA_C(cpu: Z80Cpu) {
+}
+
+function LdA_D(cpu: Z80Cpu) {
+}
+
+function LdA_E(cpu: Z80Cpu) {
+}
+
+function LdA_H(cpu: Z80Cpu) {
+}
+
+function LdA_L(cpu: Z80Cpu) {
+}
+
+function LdA_HLi(cpu: Z80Cpu) {
+}
+
+function AddA_B(cpu: Z80Cpu) {
+}
+
+function AddA_C(cpu: Z80Cpu) {
+}
+
+function AddA_D(cpu: Z80Cpu) {
+}
+
+function AddA_E(cpu: Z80Cpu) {
+}
+
+function AddA_H(cpu: Z80Cpu) {
+}
+
+function AddA_L(cpu: Z80Cpu) {
+}
+
+function AddA_HLi(cpu: Z80Cpu) {
+}
+
+function AddA_A(cpu: Z80Cpu) {
+}
+
+function AdcA_B(cpu: Z80Cpu) {
+}
+
+function AdcA_C(cpu: Z80Cpu) {
+}
+
+function AdcA_D(cpu: Z80Cpu) {
+}
+
+function AdcA_E(cpu: Z80Cpu) {
+}
+
+function AdcA_H(cpu: Z80Cpu) {
+}
+
+function AdcA_L(cpu: Z80Cpu) {
+}
+
+function AdcA_HLi(cpu: Z80Cpu) {
+}
+
+function AdcA_A(cpu: Z80Cpu) {
+}
+
+function SubB(cpu: Z80Cpu) {
+}
+
+function SubC(cpu: Z80Cpu) {
+}
+
+function SubD(cpu: Z80Cpu) {
+}
+
+function SubE(cpu: Z80Cpu) {
+}
+
+function SubH(cpu: Z80Cpu) {
+}
+
+function SubL(cpu: Z80Cpu) {
+}
+
+function SubHLi(cpu: Z80Cpu) {
+}
+
+function SubA(cpu: Z80Cpu) {
+}
+
+function SbcB(cpu: Z80Cpu) {
+}
+
+function SbcC(cpu: Z80Cpu) {
+}
+
+function SbcD(cpu: Z80Cpu) {
+}
+
+function SbcE(cpu: Z80Cpu) {
+}
+
+function SbcH(cpu: Z80Cpu) {
+}
+
+function SbcL(cpu: Z80Cpu) {
+}
+
+function SbcHLi(cpu: Z80Cpu) {
+}
+
+function SbcA(cpu: Z80Cpu) {
+}
+
+function AndB(cpu: Z80Cpu) {
+}
+
+function AndC(cpu: Z80Cpu) {
+}
+
+function AndD(cpu: Z80Cpu) {
+}
+
+function AndE(cpu: Z80Cpu) {
+}
+
+function AndH(cpu: Z80Cpu) {
+}
+
+function AndL(cpu: Z80Cpu) {
+}
+
+function AndHLi(cpu: Z80Cpu) {
+}
+
+function AndA(cpu: Z80Cpu) {
+}
+
+function XorB(cpu: Z80Cpu) {
+}
+
+function XorC(cpu: Z80Cpu) {
+}
+
+function XorD(cpu: Z80Cpu) {
+}
+
+function XorE(cpu: Z80Cpu) {
+}
+
+function XorH(cpu: Z80Cpu) {
+}
+
+function XorL(cpu: Z80Cpu) {
+}
+
+function XorHLi(cpu: Z80Cpu) {
+}
+
+function XorA(cpu: Z80Cpu) {
+}
+
+function OrB(cpu: Z80Cpu) {
+}
+
+function OrC(cpu: Z80Cpu) {
+}
+
+function OrD(cpu: Z80Cpu) {
+}
+
+function OrE(cpu: Z80Cpu) {
+}
+
+function OrH(cpu: Z80Cpu) {
+}
+
+function OrL(cpu: Z80Cpu) {
+}
+
+function OrHLi(cpu: Z80Cpu) {
+}
+
+function OrA(cpu: Z80Cpu) {
+}
+
+function CpB(cpu: Z80Cpu) {
+}
+
+function CpC(cpu: Z80Cpu) {
+}
+
+function CpD(cpu: Z80Cpu) {
+}
+
+function CpE(cpu: Z80Cpu) {
+}
+
+function CpH(cpu: Z80Cpu) {
+}
+
+function CpL(cpu: Z80Cpu) {
+}
+
+function CpHLi(cpu: Z80Cpu) {
+}
+
+function CpA(cpu: Z80Cpu) {
+}
+
+function RetNZ(cpu: Z80Cpu) {
+}
+
+function PopBC(cpu: Z80Cpu) {
+}
+
+function JpNZ_NN(cpu: Z80Cpu) {
+}
+
+function JpNN(cpu: Z80Cpu) {
+}
+
+function CallNZ(cpu: Z80Cpu) {
+}
+
+function PushBC(cpu: Z80Cpu) {
+}
+
+function AluAN(cpu: Z80Cpu) {
+}
+
+function Rst00(cpu: Z80Cpu) {
+}
+
+function RetZ(cpu: Z80Cpu) {
+}
+
+function Ret(cpu: Z80Cpu) {
+}
+
+function JpZ_NN(cpu: Z80Cpu) {
+}
+
+function CallZ(cpu: Z80Cpu) {
+}
+
+function CallNN(cpu: Z80Cpu) {
+}
+
+function Rst08(cpu: Z80Cpu) {
+}
+
+function RetNC(cpu: Z80Cpu) {
+}
+
+function PopDE(cpu: Z80Cpu) {
+}
+
+function JpNC_NN(cpu: Z80Cpu) {
+}
+
+function OutNA(cpu: Z80Cpu) {
+}
+
+function CallNC(cpu: Z80Cpu) {
+}
+
+function PushDE(cpu: Z80Cpu) {
+}
+
+function Rst10(cpu: Z80Cpu) {
+}
+
+function RetC(cpu: Z80Cpu) {
+}
+
+function Exx(cpu: Z80Cpu) {
+}
+
+function JpC_NN(cpu: Z80Cpu) {
+}
+
+function InAN(cpu: Z80Cpu) {
+}
+
+function CallC(cpu: Z80Cpu) {
+}
+
+function Rst18(cpu: Z80Cpu) {
+}
+
+function RetPO(cpu: Z80Cpu) {
+}
+
+function PopHL(cpu: Z80Cpu) {
+}
+
+function JpPO_NN(cpu: Z80Cpu) {
+}
+
+function ExSPiHL(cpu: Z80Cpu) {
+}
+
+function CallPO(cpu: Z80Cpu) {
+}
+
+function PushHL(cpu: Z80Cpu) {
+}
+
+function Rst20(cpu: Z80Cpu) {
+}
+
+function RetPE(cpu: Z80Cpu) {
+}
+
+function JpHL(cpu: Z80Cpu) {
+}
+
+function JpPE_NN(cpu: Z80Cpu) {
+}
+
+function ExDEHL(cpu: Z80Cpu) {
+}
+
+function CallPE(cpu: Z80Cpu) {
+}
+
+function Rst28(cpu: Z80Cpu) {
+}
+
+function RetP(cpu: Z80Cpu) {
+}
+
+function PopAF(cpu: Z80Cpu) {
+}
+
+function JpP_NN(cpu: Z80Cpu) {
+}
+
+function Di(cpu: Z80Cpu) {
+}
+
+function CallP(cpu: Z80Cpu) {
+}
+
+function PushAF(cpu: Z80Cpu) {
+}
+
+function Rst30(cpu: Z80Cpu) {
+}
+
+function RetM(cpu: Z80Cpu) {
+}
+
+function LdSPHL(cpu: Z80Cpu) {
+}
+
+function JpM_NN(cpu: Z80Cpu) {
+}
+
+function Ei(cpu: Z80Cpu) {
+}
+
+function CallM(cpu: Z80Cpu) {
+}
+
+function Rst38(cpu: Z80Cpu) {
+}
+
+// ========================================================================
+// Processing extended (ED prefix) Z80 instructions    
+
+function Swapnib(cpu: Z80Cpu) {
+}
+
+function MirrA(cpu: Z80Cpu) {
+}
+
+function MirrDE(cpu: Z80Cpu) {
+}
+
+function TestN(cpu: Z80Cpu) {
+}
+
+function Mul(cpu: Z80Cpu) {
+}
+
+function AddHL_A(cpu: Z80Cpu) {
+}
+
+function AddDE_A(cpu: Z80Cpu) {
+}
+
+function AddBC_A(cpu: Z80Cpu) {
+}
+
+function AddHLNN(cpu: Z80Cpu) {
+}
+
+function AddDENN(cpu: Z80Cpu) {
+}
+
+function AddBCNN(cpu: Z80Cpu) {
+}
+
+function InB_C(cpu: Z80Cpu) {
+}
+
+function OutC_B(cpu: Z80Cpu) {
+}
+
+function SbcHL_QQ(cpu: Z80Cpu) {
+}
+
+function LdNNi_QQ(cpu: Z80Cpu) {
+}
+
+function Neg(cpu: Z80Cpu) {
+}
+
+function Retn(cpu: Z80Cpu) {
+}
+
+function ImN(cpu: Z80Cpu) {
+}
+
+function LdXR_A(cpu: Z80Cpu) {
+}
+
+function InC_C(cpu: Z80Cpu) {
+}
+
+function OutC_C(cpu: Z80Cpu) {
+}
+
+function AdcHL_QQ(cpu: Z80Cpu) {
+}
+
+function LdQQ_NNi(cpu: Z80Cpu) {
+}
+
+function Reti(cpu: Z80Cpu) {
+}
+
+function InD_C(cpu: Z80Cpu) {
+}
+
+function OutC_D(cpu: Z80Cpu) {
+}
+
+function LdA_XR(cpu: Z80Cpu) {
+}
+
+function InE_C(cpu: Z80Cpu) {
+}
+
+function OutC_E(cpu: Z80Cpu) {
+}
+
+function Rrd(cpu: Z80Cpu) {
+}
+
+function InH_C(cpu: Z80Cpu) {
+}
+
+function OutC_H(cpu: Z80Cpu) {
+}
+
+function Rld(cpu: Z80Cpu) {
+}
+
+function InL_C(cpu: Z80Cpu) {
+}
+
+function OutC_L(cpu: Z80Cpu) {
+}
+
+function InF_C(cpu: Z80Cpu) {
+}
+
+function OutC_0(cpu: Z80Cpu) {
+}
+
+function InA_C(cpu: Z80Cpu) {
+}
+
+function OutC_A(cpu: Z80Cpu) {
+}
+
+function LdSP_NNi(cpu: Z80Cpu) {
+}
+
+function PushNN(cpu: Z80Cpu) {
+}
+
+function Outinb(cpu: Z80Cpu) {
+}
+
+function Nextreg(cpu: Z80Cpu) {
+}
+
+function NextregA(cpu: Z80Cpu) {
+}
+
+function Pixeldn(cpu: Z80Cpu) {
+}
+
+function Pixelad(cpu: Z80Cpu) {
+}
+
+function Setae(cpu: Z80Cpu) {
+}
+
+function Ldi(cpu: Z80Cpu) {
+}
+
+function Cpi(cpu: Z80Cpu) {
+}
+
+function Ini(cpu: Z80Cpu) {
+}
+
+function Outi(cpu: Z80Cpu) {
+}
+
+function Ldix(cpu: Z80Cpu) {
+}
+
+function Ldd(cpu: Z80Cpu) {
+}
+
+function Cpd(cpu: Z80Cpu) {
+}
+
+function Ind(cpu: Z80Cpu) {
+}
+
+function Outd(cpu: Z80Cpu) {
+}
+
+function Lddx(cpu: Z80Cpu) {
+}
+
+function Ldir(cpu: Z80Cpu) {
+}
+
+function Cpir(cpu: Z80Cpu) {
+}
+
+function Inir(cpu: Z80Cpu) {
+}
+
+function Otir(cpu: Z80Cpu) {
+}
+
+function Ldirx(cpu: Z80Cpu) {
+}
+
+function Lddr(cpu: Z80Cpu) {
+}
+
+function Cpdr(cpu: Z80Cpu) {
+}
+
+function Indr(cpu: Z80Cpu) {
+}
+
+function Otdr(cpu: Z80Cpu) {
+}
+
+function Lddrx(cpu: Z80Cpu) {
+}
+
+function Ldirscale(cpu: Z80Cpu) {
+}
+
+function Ldpirx(cpu: Z80Cpu) {
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
